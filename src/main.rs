@@ -45,7 +45,16 @@ fn setup_scene(
         },
         RigidBody::Dynamic,
         Collider::cuboid(0.8, 0.5, 1.5),
+        ExternalImpulse::default(),
     ));
+}
+
+fn bump_character(keyboard_input: Res<Input<KeyCode>>, mut query: Query<&mut ExternalImpulse>) {
+    let Some(mut impulses) = query.iter_mut().next() else { return };
+
+    if keyboard_input.just_pressed(KeyCode::Up) {
+        impulses.impulse.y += 10.0;
+    }
 }
 
 fn main() {
@@ -68,5 +77,6 @@ fn main() {
         .add_system(bevy::window::close_on_esc)
         .add_startup_system(setup_scene_camera)
         .add_startup_system(setup_scene)
+        .add_system(bump_character)
         .run();
 }
