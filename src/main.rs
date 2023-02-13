@@ -53,7 +53,17 @@ fn bump_character(keyboard_input: Res<Input<KeyCode>>, mut query: Query<&mut Ext
     let Some(mut impulses) = query.iter_mut().next() else { return };
 
     if keyboard_input.just_pressed(KeyCode::Up) {
-        impulses.impulse.y += 10.0;
+        let impulse = Vec3::new(0.0, 10.0, 0.0);
+        let front_left = Vec3::new(0.8, -0.5, 1.5);
+        let fl_torque = front_left.cross(impulse);
+        let front_right = Vec3::new(-0.8, -0.5, 1.5);
+        let fr_torque = front_right.cross(impulse);
+        let back_left = Vec3::new(0.8, -0.5, -1.5);
+        let bl_torque = back_left.cross(impulse);
+        let back_right = Vec3::new(-0.8, -0.5, -1.5);
+        let br_torque = back_right.cross(impulse);
+        impulses.impulse = impulse;
+        impulses.torque_impulse = fl_torque + fr_torque + bl_torque + br_torque;
     }
 }
 
