@@ -3,6 +3,9 @@ use bevy_rapier3d::prelude::*;
 
 const WINDOW_SIZE: f32 = 500.0;
 
+#[derive(Component, Deref, DerefMut)]
+struct WheelPoints(Vec<Vec3>);
+
 fn setup_scene_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-3.0, 3.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -46,24 +49,30 @@ fn setup_scene(
         RigidBody::Dynamic,
         Collider::cuboid(0.8, 0.5, 1.5),
         ExternalImpulse::default(),
+        WheelPoints(vec![
+            // Front left
+            Vec3::new(0.8, -0.5, 1.5),
+            // Front right
+            Vec3::new(-0.8, -0.5, 1.5),
+            // Back left
+            Vec3::new(0.8, -0.5, -1.5),
+            // Back right
+            Vec3::new(-0.8, -0.5, -1.5),
+        ]),
     ));
 }
 
-fn bump_character(keyboard_input: Res<Input<KeyCode>>, mut query: Query<&mut ExternalImpulse>) {
-    let Some(mut impulses) = query.iter_mut().next() else { return };
+fn bump_character(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<(&mut ExternalImpulse, &WheelPoints)>,
+) {
+    let Some((mut impulses, wheel_points)) = query.iter_mut().next() else { return };
 
     if keyboard_input.just_pressed(KeyCode::Up) {
         let impulse = Vec3::new(0.0, 10.0, 0.0);
-        let front_left = Vec3::new(0.8, -0.5, 1.5);
-        let fl_torque = front_left.cross(impulse);
-        let front_right = Vec3::new(-0.8, -0.5, 1.5);
-        let fr_torque = front_right.cross(impulse);
-        let back_left = Vec3::new(0.8, -0.5, -1.5);
-        let bl_torque = back_left.cross(impulse);
-        let back_right = Vec3::new(-0.8, -0.5, -1.5);
-        let br_torque = back_right.cross(impulse);
+        let torque: Vec3 = wheel_points.iter().map(|point| point.cross(impulse)).sum();
         impulses.impulse = impulse;
-        impulses.torque_impulse = fl_torque + fr_torque + bl_torque + br_torque;
+        impulses.torque_impulse = torque;
     }
 }
 
