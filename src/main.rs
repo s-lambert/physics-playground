@@ -48,7 +48,7 @@ fn setup_scene(
         },
         RigidBody::Dynamic,
         Collider::cuboid(0.8, 0.5, 1.5),
-        ExternalImpulse::default(),
+        ExternalForce::default(),
         WheelPoints(vec![
             // Front left
             Vec3::new(0.8, -0.5, 1.5),
@@ -64,15 +64,17 @@ fn setup_scene(
 
 fn bump_character(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&mut ExternalImpulse, &WheelPoints)>,
+    mut query: Query<(&mut ExternalForce, &WheelPoints)>,
 ) {
-    let Some((mut impulses, wheel_points)) = query.iter_mut().next() else { return };
+    let Some((mut forces, wheel_points)) = query.iter_mut().next() else { return };
 
-    if keyboard_input.just_pressed(KeyCode::Up) {
-        let impulse = Vec3::new(0.0, 10.0, 0.0);
-        let torque: Vec3 = wheel_points.iter().map(|point| point.cross(impulse)).sum();
-        impulses.impulse = impulse;
-        impulses.torque_impulse = torque;
+    if keyboard_input.pressed(KeyCode::Up) {
+        let force = Vec3::new(0.0, 100.0, 0.0);
+        let torque: Vec3 = wheel_points.iter().map(|point| point.cross(force)).sum();
+        forces.force = force;
+        forces.torque = torque;
+    } else {
+        *forces = ExternalForce::default();
     }
 }
 
