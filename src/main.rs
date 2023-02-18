@@ -51,6 +51,7 @@ fn setup_scene(
                 ..default()
             },
             RigidBody::Dynamic,
+            Velocity::default(),
             Collider::cuboid(0.8, 0.5, 1.5),
             ExternalForce::default(),
             // This damping is to stabilise the wheel forces, might need to be implemented when calculating the force
@@ -95,14 +96,17 @@ fn setup_scene(
         });
 }
 
-fn bump_character(
+fn move_car(
     rapier_context: Res<RapierContext>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut character_query: Query<(&GlobalTransform, &mut ExternalForce), Without<WheelPoints>>,
+    mut car_query: Query<
+        (&GlobalTransform, &mut Velocity, &mut ExternalForce),
+        Without<WheelPoints>,
+    >,
     wheel_points_query: Query<&GlobalTransform, With<WheelPoints>>,
 ) {
-    let Some((character_transform, mut forces)) = character_query.iter_mut().next() else { return };
-    let character_translation = character_transform.translation();
+    let Some((car_transform, mut velocity, mut forces)) = car_query.iter_mut().next() else { return };
+    let car_translation = car_transform.translation();
 
     let suspension_force = Vec3::new(0.0, 18.0, 0.0);
 
@@ -121,8 +125,7 @@ fn bump_character(
         {
             let strength = 1.0 - toi / max_toi;
             let wheel_force = suspension_force * strength;
-            let wheel_torque =
-                (wheel_translation - character_translation).cross(wheel_force) * strength;
+            let wheel_torque = (wheel_translation - car_translation).cross(wheel_force) * strength;
             total_torque += wheel_torque;
             total_force += wheel_force;
         }
@@ -160,6 +163,6 @@ fn main() {
         .add_system(bevy::window::close_on_esc)
         .add_startup_system(setup_scene_camera)
         .add_startup_system(setup_scene)
-        .add_system(bump_character)
+        .add_system(move_car)
         .run();
 }
