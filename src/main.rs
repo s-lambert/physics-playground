@@ -4,7 +4,9 @@ use bevy_rapier3d::prelude::*;
 const WINDOW_SIZE: f32 = 500.0;
 
 #[derive(Component)]
-struct WheelPoints;
+struct WheelPoints {
+    direction: String,
+}
 
 fn setup_scene_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
@@ -58,34 +60,51 @@ fn setup_scene(
             },
         ))
         .with_children(|parent| {
-            let wheel_points = vec![
-                // Front left
-                Vec3::new(0.8, -0.5, 1.5),
-                // Front right
-                Vec3::new(-0.8, -0.5, 1.5),
-                // Back left
-                Vec3::new(0.8, -0.5, -1.5),
-                // Back right
-                Vec3::new(-0.8, -0.5, -1.5),
-            ];
-
-            for wheel_point in wheel_points {
-                parent.spawn((
-                    WheelPoints,
-                    TransformBundle::from_transform(Transform::from_translation(wheel_point)),
-                ));
-            }
+            parent.spawn((
+                WheelPoints {
+                    direction: "Front Left".to_string(),
+                },
+                TransformBundle::from_transform(Transform::from_translation(Vec3::new(
+                    0.8, -0.5, 1.5,
+                ))),
+            ));
+            parent.spawn((
+                WheelPoints {
+                    direction: "Front Right".to_string(),
+                },
+                TransformBundle::from_transform(Transform::from_translation(Vec3::new(
+                    -0.8, -0.5, 1.5,
+                ))),
+            ));
+            parent.spawn((
+                WheelPoints {
+                    direction: "Back Left".to_string(),
+                },
+                TransformBundle::from_transform(Transform::from_translation(Vec3::new(
+                    0.8, -0.5, -1.5,
+                ))),
+            ));
+            parent.spawn((
+                WheelPoints {
+                    direction: "Back Right".to_string(),
+                },
+                TransformBundle::from_transform(Transform::from_translation(Vec3::new(
+                    -0.8, -0.5, -1.5,
+                ))),
+            ));
         });
 }
 
 fn bump_character(
     rapier_context: Res<RapierContext>,
-    mut query: Query<&mut ExternalForce, Without<WheelPoints>>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut character_query: Query<(&GlobalTransform, &mut ExternalForce), Without<WheelPoints>>,
     wheel_points_query: Query<&GlobalTransform, With<WheelPoints>>,
 ) {
-    let Some(mut forces) = query.iter_mut().next() else { return };
+    let Some((character_transform, mut forces)) = character_query.iter_mut().next() else { return };
+    let character_translation = character_transform.translation();
 
-    let force = Vec3::new(0.0, 18.0, 0.0);
+    let suspension_force = Vec3::new(0.0, 18.0, 0.0);
 
     let mut total_force = Vec3::default();
     let mut total_torque: Vec3 = Vec3::default();
@@ -96,20 +115,25 @@ fn bump_character(
     let query_filter = QueryFilter::only_fixed();
 
     for wheel_point in wheel_points_query.iter() {
-        if let Some((_entity, toi)) = rapier_context.cast_ray(
-            wheel_point.translation(),
-            ray_dir,
-            max_toi,
-            solid,
-            query_filter,
-        ) {
+        let wheel_translation = wheel_point.translation();
+        if let Some((_entity, toi)) =
+            rapier_context.cast_ray(wheel_translation, ray_dir, max_toi, solid, query_filter)
+        {
             let strength = 1.0 - toi / max_toi;
-            dbg!(strength);
-            let wheel_force = force * strength;
-            let wheel_torque = wheel_point.translation().cross(wheel_force) * strength;
+            let wheel_force = suspension_force * strength;
+            let wheel_torque =
+                (wheel_translation - character_translation).cross(wheel_force) * strength;
             total_torque += wheel_torque;
             total_force += wheel_force;
         }
+    }
+
+    let driving_force = Vec3::new(0.0, 0.0, 20.0);
+
+    if keyboard_input.pressed(KeyCode::Up) {
+        total_force += driving_force;
+    } else if keyboard_input.pressed(KeyCode::Down) {
+        total_force -= driving_force;
     }
 
     forces.force = total_force;
