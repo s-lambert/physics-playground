@@ -67,7 +67,7 @@ fn setup_scene(
             ExternalForce::default(),
             // This damping is to stabilise the wheel forces, might need to be implemented when calculating the force
             Damping {
-                linear_damping: 5.0,
+                linear_damping: 3.0,
                 angular_damping: 1.0,
             },
         ))
@@ -139,12 +139,18 @@ fn move_car(
         }
     }
 
-    let driving_force = Vec3::new(0.0, 0.0, 20.0);
+    let driving_force = car_transform.rotation * Vec3::new(0.0, 0.0, 80.0);
 
     if keyboard_input.pressed(KeyCode::Up) {
         total_force += driving_force;
     } else if keyboard_input.pressed(KeyCode::Down) {
-        total_force -= driving_force;
+        total_force += -driving_force;
+    }
+
+    if keyboard_input.pressed(KeyCode::Left) {
+        total_torque.y += 10.0;
+    } else if keyboard_input.pressed(KeyCode::Right) {
+        total_torque.y -= 10.0;
     }
 
     forces.force = total_force;
