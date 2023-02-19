@@ -139,12 +139,19 @@ fn move_car(
         }
     }
 
-    let driving_force = car_transform.rotation * Vec3::new(0.0, 0.0, 80.0);
+    let mut driving_force = car_transform.rotation * Vec3::new(0.0, 0.0, 160.0);
+    driving_force.y = 0.0;
 
     if keyboard_input.pressed(KeyCode::Up) {
+        let acceleration_point = car_transform.rotation * Vec3::new(0.0, -0.2, 0.5);
+        let acceleration_torque = (acceleration_point).cross(driving_force);
         total_force += driving_force;
+        total_torque += acceleration_torque;
     } else if keyboard_input.pressed(KeyCode::Down) {
+        let braking_point = car_transform.rotation * Vec3::new(0.0, -0.2, -0.5);
+        let braking_torque = (braking_point).cross(-driving_force);
         total_force += -driving_force;
+        total_torque += braking_torque;
     }
 
     if keyboard_input.pressed(KeyCode::Left) {
