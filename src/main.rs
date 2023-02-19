@@ -68,7 +68,7 @@ fn setup_scene(
             // This damping is to stabilise the wheel forces, might need to be implemented when calculating the force
             Damping {
                 linear_damping: 3.0,
-                angular_damping: 1.0,
+                angular_damping: 5.0,
             },
         ))
         .with_children(|parent| {
@@ -108,6 +108,7 @@ fn setup_scene(
 }
 
 fn move_car(
+    time: Res<Time>,
     rapier_context: Res<RapierContext>,
     keyboard_input: Res<Input<KeyCode>>,
     mut car_query: Query<(&Transform, &mut Velocity, &mut ExternalForce), Without<WheelPoints>>,
@@ -155,10 +156,11 @@ fn move_car(
     }
 
     if keyboard_input.pressed(KeyCode::Left) {
-        total_torque.y += 10.0;
+        velocity.angvel.y += 20.0 * time.delta_seconds();
     } else if keyboard_input.pressed(KeyCode::Right) {
-        total_torque.y -= 10.0;
+        velocity.angvel.y -= 20.0 * time.delta_seconds();
     }
+    velocity.angvel.y = velocity.angvel.y.clamp(-20.0, 20.0);
 
     forces.force = total_force;
     forces.torque = total_torque;
