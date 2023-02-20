@@ -24,17 +24,19 @@ fn setup_scene(
         ..default()
     });
 
+    // Ground
     commands.spawn((
         MaterialMeshBundle {
-            mesh: meshes.add(Mesh::from(shape::Box::new(20.0, 0.2, 20.0))),
+            mesh: meshes.add(Mesh::from(shape::Box::new(200.0, 0.2, 200.0))),
             material: materials.add(Color::SILVER.into()),
             transform: Transform::from_xyz(0.0, -0.1, 0.0),
             ..default()
         },
         RigidBody::Fixed,
-        Collider::cuboid(10.0, 0.1, 10.0),
+        Collider::cuboid(100.0, 0.1, 100.0),
     ));
 
+    // Bump
     commands.spawn((
         MaterialMeshBundle {
             mesh: meshes.add(Mesh::from(shape::Box::new(20.0, 0.2, 20.0))),
