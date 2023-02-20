@@ -8,13 +8,6 @@ struct WheelPoints {
     direction: String,
 }
 
-fn setup_scene_camera(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-3.0, 3.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..Default::default()
-    });
-}
-
 fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -72,6 +65,11 @@ fn setup_scene(
             },
         ))
         .with_children(|parent| {
+            parent.spawn(Camera3dBundle {
+                transform: Transform::from_xyz(0.0, 3.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
+                ..Default::default()
+            });
+
             parent.spawn((
                 WheelPoints {
                     direction: "Front Left".to_string(),
@@ -184,7 +182,6 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_system(bevy::window::close_on_esc)
-        .add_startup_system(setup_scene_camera)
         .add_startup_system(setup_scene)
         .add_system(move_car)
         .run();
