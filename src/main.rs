@@ -191,7 +191,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     window: WindowDescriptor {
-                        title: "Monster Survivors!".to_string(),
+                        title: "Physics Playground!".to_string(),
                         width: WINDOW_SIZE,
                         height: WINDOW_SIZE,
                         ..default()
