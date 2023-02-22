@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
@@ -48,6 +50,22 @@ fn setup_scene(
         Collider::cuboid(10.0, 0.1, 10.0),
     ));
 
+    // Ramp
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(Mesh::from(shape::Box::new(20.0, 0.2, 20.0))),
+            material: materials.add(Color::SILVER.into()),
+            transform: Transform {
+                translation: Vec3::new(0.0, 2.1, 30.0),
+                rotation: Quat::from_axis_angle(Vec3::X, -PI / 8.0),
+                ..default()
+            },
+            ..default()
+        },
+        RigidBody::Fixed,
+        Collider::cuboid(10.0, 0.1, 10.0),
+    ));
+
     commands
         .spawn((
             MaterialMeshBundle {
@@ -62,7 +80,7 @@ fn setup_scene(
             ExternalForce::default(),
             // This damping is to stabilise the wheel forces, might need to be implemented when calculating the force
             Damping {
-                linear_damping: 3.0,
+                linear_damping: 2.0,
                 angular_damping: 5.0,
             },
         ))
