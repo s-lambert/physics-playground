@@ -125,6 +125,11 @@ fn setup_scene(
         });
 }
 
+fn get_y_rotation(quat: Quat) -> Quat {
+    let euler = quat.to_euler(EulerRot::YXZ);
+    Quat::from_euler(EulerRot::YXZ, euler.0, 0.0, 0.0)
+}
+
 fn move_car(
     time: Res<Time>,
     rapier_context: Res<RapierContext>,
@@ -145,12 +150,22 @@ fn move_car(
     let solid = true;
     let query_filter = QueryFilter::only_fixed();
 
+    let mut wheel_hits = 0.0;
+    let mut wheel_normals = Vec3::default();
+
     for wheel_point in wheel_points_query.iter() {
         let wheel_translation = wheel_point.translation();
-        if let Some((_entity, toi)) =
-            rapier_context.cast_ray(wheel_translation, ray_dir, max_toi, solid, query_filter)
-        {
-            let strength = 1.0 - toi / max_toi;
+        if let Some((_entity, intersection)) = rapier_context.cast_ray_and_get_normal(
+            wheel_translation,
+            ray_dir,
+            max_toi,
+            solid,
+            query_filter,
+        ) {
+            wheel_hits += 1.0;
+            wheel_normals += intersection.normal;
+
+            let strength = 1.0 - intersection.toi / max_toi;
             let wheel_force = suspension_force * strength;
             let wheel_torque = (wheel_translation - car_translation).cross(wheel_force) * strength;
             total_torque += wheel_torque;
@@ -158,17 +173,24 @@ fn move_car(
         }
     }
 
-    let mut driving_force = car_transform.rotation * Vec3::new(0.0, 0.0, 160.0);
-    driving_force.y = 0.0;
+    let driving_plane = if wheel_hits > 0.0 {
+        Quat::from_rotation_arc(Vec3::Y, wheel_normals / wheel_hits)
+    } else {
+        Quat::from_rotation_arc(Vec3::Y, Vec3::Y)
+    };
+    let driving_force =
+        driving_plane * get_y_rotation(car_transform.rotation) * Vec3::new(0.0, 0.0, 160.0);
 
     if keyboard_input.pressed(KeyCode::Up) {
         let acceleration_point = car_transform.rotation * Vec3::new(0.0, -0.2, 0.5);
-        let acceleration_torque = (acceleration_point).cross(driving_force);
+        let acceleration_torque =
+            (acceleration_point).cross(car_transform.rotation * Vec3::new(0.0, 0.0, 160.0));
         total_force += driving_force;
         total_torque += acceleration_torque;
     } else if keyboard_input.pressed(KeyCode::Down) {
         let braking_point = car_transform.rotation * Vec3::new(0.0, -0.2, -0.5);
-        let braking_torque = (braking_point).cross(-driving_force);
+        let braking_torque =
+            (braking_point).cross(-(car_transform.rotation * Vec3::new(0.0, 0.0, 160.0)));
         total_force += -driving_force;
         total_torque += braking_torque;
     }
