@@ -6,6 +6,9 @@ use bevy_rapier3d::prelude::*;
 const WINDOW_SIZE: f32 = 500.0;
 
 #[derive(Component)]
+struct Car;
+
+#[derive(Component)]
 struct WheelPoints {
     direction: String,
 }
@@ -66,8 +69,14 @@ fn setup_scene(
         Collider::cuboid(10.0, 0.1, 10.0),
     ));
 
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 3.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ..Default::default()
+    });
+
     commands
         .spawn((
+            Car,
             MaterialMeshBundle {
                 mesh: meshes.add(Mesh::from(shape::Box::new(1.6, 1.0, 3.0))),
                 material: materials.add(Color::AZURE.into()),
@@ -85,11 +94,6 @@ fn setup_scene(
             },
         ))
         .with_children(|parent| {
-            parent.spawn(Camera3dBundle {
-                transform: Transform::from_xyz(0.0, 3.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
-                ..Default::default()
-            });
-
             parent.spawn((
                 WheelPoints {
                     direction: "Front Left".to_string(),
@@ -134,7 +138,10 @@ fn move_car(
     time: Res<Time>,
     rapier_context: Res<RapierContext>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut car_query: Query<(&Transform, &mut Velocity, &mut ExternalForce), Without<WheelPoints>>,
+    mut car_query: Query<
+        (&Transform, &mut Velocity, &mut ExternalForce),
+        (With<Car>, Without<WheelPoints>),
+    >,
     wheel_points_query: Query<&GlobalTransform, With<WheelPoints>>,
 ) {
     let Some((car_transform, mut velocity, mut forces)) = car_query.iter_mut().next() else { return };
@@ -182,13 +189,13 @@ fn move_car(
         driving_plane * get_y_rotation(car_transform.rotation) * Vec3::new(0.0, 0.0, 160.0);
 
     if keyboard_input.pressed(KeyCode::Up) {
-        let acceleration_point = car_transform.rotation * Vec3::new(0.0, -0.2, 0.5);
+        let acceleration_point = car_transform.rotation * Vec3::new(0.0, -0.1, 0.1);
         let acceleration_torque =
             (acceleration_point).cross(car_transform.rotation * Vec3::new(0.0, 0.0, 160.0));
         total_force += driving_force;
         total_torque += acceleration_torque;
     } else if keyboard_input.pressed(KeyCode::Down) {
-        let braking_point = car_transform.rotation * Vec3::new(0.0, -0.2, -0.5);
+        let braking_point = car_transform.rotation * Vec3::new(0.0, -0.1, -0.1);
         let braking_torque =
             (braking_point).cross(-(car_transform.rotation * Vec3::new(0.0, 0.0, 160.0)));
         total_force += -driving_force;
@@ -204,6 +211,19 @@ fn move_car(
 
     forces.force = total_force;
     forces.torque = total_torque;
+}
+
+fn camera_follow(
+    mut camera_transform_query: Query<&mut Transform, With<Camera>>,
+    car_transform_query: Query<&Transform, (With<Car>, Without<Camera>)>,
+) {
+    let Some(mut camera_transform) = camera_transform_query.iter_mut().next() else { return };
+    let Some(car_transform) = car_transform_query.iter().next() else { return };
+
+    camera_transform.translation = car_transform.translation
+        + get_y_rotation(car_transform.rotation) * Vec3::new(0.0, 3.0, -10.0);
+    camera_transform.rotation =
+        Quat::from_axis_angle(Vec3::Y, PI) * get_y_rotation(car_transform.rotation)
 }
 
 fn main() {
@@ -226,5 +246,6 @@ fn main() {
         .add_system(bevy::window::close_on_esc)
         .add_startup_system(setup_scene)
         .add_system(move_car)
+        .add_system(camera_follow)
         .run();
 }
