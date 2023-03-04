@@ -223,7 +223,7 @@ fn camera_follow(
     camera_transform.translation = car_transform.translation
         + get_y_rotation(car_transform.rotation) * Vec3::new(0.0, 3.0, -10.0);
     camera_transform.rotation =
-        Quat::from_axis_angle(Vec3::Y, PI) * get_y_rotation(car_transform.rotation)
+        Quat::from_axis_angle(Vec3::Y, PI) * get_y_rotation(car_transform.rotation);
 }
 
 fn main() {
